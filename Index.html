@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MathSolve | Bienvenido</title>
+
+    <!-- Fuente -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <!-- Archivo CSS -->
+    <link rel="stylesheet" href="estilo 2.css">
+</head>
+<body>
+
+    <!-- LOGO EN LA PARTE SUPERIOR DERECHA -->
+    <header class="encabezado">
+        <a href="index.html" class="logo-derecha" aria-label="Inicio">
+            <img src="Iimagen/logo 2.png" alt="Logo de MathSolve">
+        </a>
+    </header>
+
+    <!-- SÍMBOLOS MATEMÁTICOS -->
+    <span class="simbolo s1">√</span>
+    <span class="simbolo s2">π</span>
+    <span class="simbolo s3">∑</span>
+    <span class="simbolo s4">x²</span>
+    <span class="simbolo s5">÷</span>
+    <span class="simbolo s6">∞</span>
+
+    <!-- TARJETA PRINCIPAL -->
+    <main class="tarjeta">
+
+        <!-- LOGO PRINCIPAL COMO IMAGEN -->
+        <div class="logo-principal">
+            <img src="Iimagen/logo_circular.png" alt="Logo principal de MathSolve">
+        </div>
+
+        <div class="nombre">ALVISU<span>Solve</span></div>
+
+        <div class="etiqueta">✦ TU AI MATEMÁTICO </div>
+
+        <h1>¡Bienvenido a <span>ALVISU!</span></h1>
+
+        <p class="descripcion">
+            Descubre una forma más sencilla de resolver tus ejercicios.
+            Realiza operaciones matemáticas, calcula raíces y potencias,
+            y encuentra soluciones de manera rápida , práctica los ejercicio.
+        </p>
+
+        <div class="caracteristicas">
+            <span>√ Raíces</span>
+            <span>x² Potencias</span>
+            <span>÷ Operaciones</span>
+            <span>∑ Ecuaciones</span>
+        </div>
+
+        <a href="Informacion.html"
+           class="boton-ingresar"
+           id="botonIngresar">
+            INGRESAR
+            <span class="flecha">→</span>
+        </a>
+
+    </main>
+
+    <!-- PANTALLA DE CARGA -->
+    <div class="pantalla-carga"
+         id="pantallaCarga"
+         role="status"
+         aria-live="polite"
+         aria-hidden="true">
+
+        <div class="contenido-carga">
+
+            <div class="circulo-externo">
+                <div class="anillo"></div>
+                <div class="anillo-interior"></div>
+
+                <!-- LOGO EN LA PANTALLA DE CARGA -->
+                <div class="icono-carga">
+                    <img src="Iimagen/logo 2.png" alt="MathSolve">
+                </div>
+            </div>
+
+            <h2 class="titulo-carga">
+                Preparando <span>ALVISU</span>
+            </h2>
+
+            <p class="texto-carga">
+                Preparando tu espacio matemático...<br>
+                ¡En unos instantes estarás listo para resolver!
+            </p>
+
+            <div class="simbolos-carga">
+                <span>√x</span>
+                <span>π</span>
+                <span>x²</span>
+                <span>∑</span>
+            </div>
+
+            <div class="barra-fondo">
+                <div class="barra-progreso" id="barraProgreso"></div>
+            </div>
+
+            <div class="porcentaje" id="porcentaje">
+                CARGANDO... 0%
+            </div>
+
+            <p class="mensaje-final">
+                ✦ TU CONOCIMIENTO y Aprendizaje  COMIENZA AQUÍ ✦
+            </p>
+
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script>
+        const botonIngresar = document.getElementById("botonIngresar");
+        const pantallaCarga = document.getElementById("pantallaCarga");
+        const porcentaje = document.getElementById("porcentaje");
+        const barraProgreso = document.getElementById("barraProgreso");
+
+        let cargando = false;
+
+        botonIngresar.addEventListener("click", function(evento) {
+            evento.preventDefault();
+
+            if (cargando) return;
+            cargando = true;
+
+            pantallaCarga.classList.add("activa");
+            pantallaCarga.setAttribute("aria-hidden", "false");
+
+            let progreso = 0;
+
+            const intervalo = setInterval(function() {
+                progreso = Math.min(progreso + 2, 100);
+
+                porcentaje.textContent = "CARGANDO... " + progreso + "%";
+                barraProgreso.style.width = progreso + "%";
+
+                if (progreso >= 100) {
+                    clearInterval(intervalo);
+                }
+            }, 42);
+
+            setTimeout(function() {
+                window.location.href = "Informacion.html";
+            }, 2300);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,4698 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MathSolve — Calculadora matemática</title>
+
+    <link rel="stylesheet" href="/estilos.css">
+
+    <!-- Motor simbólico -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/14.0.1/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/all.min.js"></script>
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        ALVISU<span>Solve</span>
+    </div>
+
+    <div>
+        🧮 Matemáticas paso a paso
+    </div>
+
+</header>
+
+
+<div class="app">
+
+<div class="grid">
+
+<!-- =========================
+     ENTRADA
+========================= -->
+
+<div class="card">
+
+    <h2>✏️ Ejercicio</h2>
+
+    <textarea
+        id="entrada"
+        placeholder="Escribe o pega un ejercicio..."
+    ></textarea>
+
+
+    <div class="acciones">
+
+        <button class="azul" onclick="resolver()">
+            Resolver
+        </button>
+
+        <button class="gris" onclick="pegar()">
+            📋 Pegar
+        </button>
+
+        <button class="gris" onclick="copiar()">
+            Copiar
+        </button>
+
+        <button class="rojo" onclick="limpiar()">
+            Limpiar
+        </button>
+
+    </div>
+
+
+    <!-- CALCULADORA -->
+
+    <div class="calculadora">
+
+        <h3>🧮 Teclado</h3>
+
+        <div class="botones">
+
+            <button class="ac" onclick="limpiarEntrada()">AC</button>
+
+            <button class="calc" onclick="borrar()">⌫</button>
+
+            <button class="calc" onclick="insertar('(')">(</button>
+
+            <button class="calc" onclick="insertar(')')">)</button>
+
+            <button class="op" onclick="insertar('÷')">÷</button>
+
+
+            <button class="calc" onclick="insertar('7')">7</button>
+
+            <button class="calc" onclick="insertar('8')">8</button>
+
+            <button class="calc" onclick="insertar('9')">9</button>
+
+            <button class="op" onclick="insertar('^')">xʸ</button>
+
+            <button class="op" onclick="insertar('×')">×</button>
+
+
+            <button class="calc" onclick="insertar('4')">4</button>
+
+            <button class="calc" onclick="insertar('5')">5</button>
+
+            <button class="calc" onclick="insertar('6')">6</button>
+
+            <button class="op" onclick="insertar('√(')">√</button>
+
+            <button class="op" onclick="insertar('-')">−</button>
+
+
+            <button class="calc" onclick="insertar('1')">1</button>
+
+            <button class="calc" onclick="insertar('2')">2</button>
+
+            <button class="calc" onclick="insertar('3')">3</button>
+
+            <button class="calc" onclick="insertar('.')">.</button>
+
+            <button class="op" onclick="insertar('+')">+</button>
+
+
+            <button
+                class="calc"
+                style="grid-column:span 2"
+                onclick="insertar('0')"
+            >
+                0
+            </button>
+
+            <button class="calc" onclick="insertar('π')">π</button>
+
+            <button class="calc" onclick="insertar('!')">n!</button>
+
+            <button class="igual" onclick="resolver()">=</button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     RESULTADO
+========================= -->
+
+<div>
+
+   
+<div class="resultado">
+    <small>RESULTADO</small>
+    <div id="resultado" class="resultado-numero">—</div>
+</div>
+
+<!-- CUADRO BLANCO COMPLETO -->
+<div class="cuadro-blanco">
+
+    <!-- Aquí aparece la resolución del ejercicio -->
+    <div id="solucion">
+        <div class="hoja">
+            <div class="mensaje-inicial">
+                <h2>📖 Resolución</h2>
+                <p>Escribe un ejercicio y pulsa Resolver.</p>
+            </div>
+        </div>
+    </div>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   UTILIDADES
+===================================================== */
+
+function clonar(obj){
+
+    return JSON.parse(
+        JSON.stringify(obj)
+    );
+
+}
+
+
+function redondear(n){
+
+    if(!Number.isFinite(n))
+        return n;
+
+    return Math.round(
+        (n + Number.EPSILON) * 10000000000
+    ) / 10000000000;
+
+}
+
+
+function formato(n){
+
+    n = redondear(Number(n));
+
+    if(!Number.isFinite(n))
+        return String(n);
+
+    if(Number.isInteger(n)){
+
+        return n.toLocaleString("es-ES");
+
+    }
+
+    return n.toLocaleString(
+        "es-ES",
+        {
+            maximumFractionDigits:10
+        }
+    );
+
+}
+
+
+function escapar(texto){
+
+    return String(texto)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+/* =====================================================
+   ENTRADA
+===================================================== */
+
+function insertar(texto){
+
+    const campo =
+        document.getElementById("entrada");
+
+    const inicio =
+        campo.selectionStart;
+
+    const fin =
+        campo.selectionEnd;
+
+    campo.value =
+        campo.value.substring(0,inicio)
+        +
+        texto
+        +
+        campo.value.substring(fin);
+
+    campo.focus();
+
+    campo.selectionStart =
+        campo.selectionEnd =
+        inicio + texto.length;
+
+}
+
+
+function borrar(){
+
+    const campo =
+        document.getElementById("entrada");
+
+    let inicio =
+        campo.selectionStart;
+
+    let fin =
+        campo.selectionEnd;
+
+    if(inicio === fin && inicio > 0){
+
+        campo.value =
+            campo.value.substring(0,inicio-1)
+            +
+            campo.value.substring(inicio);
+
+        campo.selectionStart =
+            campo.selectionEnd =
+            inicio-1;
+
+    }else{
+
+        campo.value =
+            campo.value.substring(0,inicio)
+            +
+            campo.value.substring(fin);
+
+        campo.selectionStart =
+            campo.selectionEnd =
+            inicio;
+
+    }
+
+    campo.focus();
+
+}
+
+
+function limpiarEntrada(){
+
+    document.getElementById("entrada").value="";
+
+}
+
+
+function limpiar(){
+
+    limpiarEntrada();
+
+    document.getElementById("resultado")
+        .textContent="—";
+
+    document.getElementById("solucion")
+        .innerHTML=`
+
+        <div class="hoja">
+
+            <div style="
+                text-align:center;
+                color:#7a8696;
+                padding-top:120px;
+            ">
+
+                <h2>📖 Resolución</h2>
+
+                <p>
+                    Escribe un ejercicio y pulsa
+                    <b>Resolver</b>.
+                </p>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+async function pegar(){
+
+    try{
+
+        const texto =
+            await navigator.clipboard.readText();
+
+        document.getElementById("entrada")
+            .value=texto;
+
+    }catch{
+
+        alert(
+            "No se pudo acceder al portapapeles. Usa Ctrl+V."
+        );
+
+    }
+
+}
+
+
+async function copiar(){
+
+    const texto =
+        document.getElementById("entrada").value;
+
+    if(!texto)
+        return;
+
+    try{
+
+        await navigator.clipboard.writeText(texto);
+
+        alert("Ejercicio copiado.");
+
+    }catch{
+
+        alert("No se pudo copiar.");
+
+    }
+
+}
+
+
+/* =====================================================
+   NORMALIZACIÓN
+===================================================== */
+
+function normalizar(texto){
+
+    return String(texto)
+
+        .replace(/²/g,"^2")
+        .replace(/³/g,"^3")
+        .replace(/⁴/g,"^4")
+        .replace(/⁵/g,"^5")
+        .replace(/⁶/g,"^6")
+        .replace(/⁷/g,"^7")
+        .replace(/⁸/g,"^8")
+        .replace(/⁹/g,"^9")
+
+        .replace(/[−–—]/g,"-")
+
+        .replace(/[×·]/g,"*")
+
+        .replace(/÷/g,"/")
+
+        .replace(/π/g,"pi")
+
+        .replace(/\[/g,"(")
+        .replace(/\]/g,")")
+
+        .replace(/\{/g,"(")
+        .replace(/\}/g,")")
+
+        .replace(/√\s*/g,"sqrt")
+
+        .trim();
+
+}
+
+
+/* =====================================================
+   PREPARAR RAÍCES
+===================================================== */
+
+function prepararRaices(texto){
+
+    texto = texto.replace(
+        /sqrt\s*\(/gi,
+        "sqrt("
+    );
+
+    texto = texto.replace(
+        /sqrt\s+([0-9]+(?:\.[0-9]+)?)/gi,
+        "sqrt($1)"
+    );
+
+    return texto;
+
+}
+
+
+/* =====================================================
+   DETECTAR ECUACIÓN
+===================================================== */
+
+function esEcuacion(texto){
+
+    return texto.includes("=");
+
+}
+
+
+/* =====================================================
+   VARIABLES
+===================================================== */
+
+function obtenerVariables(texto){
+
+    const variables=[];
+
+    const palabras =
+        texto.match(/[a-zA-Z]+/g) || [];
+
+    const funciones=[
+        "sqrt",
+        "sin",
+        "cos",
+        "tan",
+        "log",
+        "ln",
+        "abs",
+        "pi",
+        "e"
+    ];
+
+    palabras.forEach(palabra=>{
+
+        const p =
+            palabra.toLowerCase();
+
+        if(
+            !funciones.includes(p) &&
+            !variables.includes(p)
+        ){
+
+            variables.push(p);
+
+        }
+
+    });
+
+    return variables;
+
+}
+
+
+/* =====================================================
+   FORMATEAR EXPRESIÓN
+===================================================== */
+
+function bonito(texto){
+
+    let s=String(texto);
+
+    s=s
+        .replace(/\*/g,"×")
+        .replace(/\^9/g,"⁹")
+        .replace(/\^8/g,"⁸")
+        .replace(/\^7/g,"⁷")
+        .replace(/\^6/g,"⁶")
+        .replace(/\^5/g,"⁵")
+        .replace(/\^4/g,"⁴")
+        .replace(/\^3/g,"³")
+        .replace(/\^2/g,"²")
+        .replace(/sqrt\((.*?)\)/g,"√($1)")
+        .replace(/\bpi\b/g,"π");
+
+    return s;
+
+}
+
+
+/* =====================================================
+   EXPRESIÓN SIMPLIFICADA
+===================================================== */
+
+function simplificar(texto){
+
+    try{
+
+        return math.simplify(
+            prepararRaices(
+                normalizar(texto)
+            )
+        ).toString();
+
+    }catch{
+
+        return texto;
+
+    }
+
+}
+
+
+/* =====================================================
+   RESOLVER EXPRESIÓN NORMAL
+===================================================== */
+
+function resolverExpresion(texto){
+
+    const original =
+        prepararRaices(
+            normalizar(texto)
+        );
+
+    try{
+
+        const tokens =
+            tokenizar(original);
+
+        const parser =
+            new Parser(tokens);
+
+        const arbol =
+            parser.parse();
+
+        const resultado =
+            redondear(
+                evaluar(arbol)
+            );
+
+        document.getElementById(
+            "resultado"
+        ).textContent =
+            formato(resultado);
+
+        generarSolucion(
+            arbol,
+            resultado
+        );
+
+    }catch(error){
+
+        try{
+
+            const valor =
+                math.evaluate(original);
+
+            document.getElementById(
+                "resultado"
+            ).textContent =
+                formato(valor);
+
+            generarPasosMath(
+                original,
+                valor
+            );
+
+        }catch(e){
+
+            mostrarError(
+                error.message
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   TOKENIZADOR
+===================================================== */
+
+function tokenizar(texto){
+
+    texto=normalizar(texto);
+
+    texto=prepararRaices(texto);
+
+    const tokens=[];
+
+    let i=0;
+
+    while(i<texto.length){
+
+        const c=texto[i];
+
+        if(/\s/.test(c)){
+
+            i++;
+            continue;
+
+        }
+
+        if(
+            /[0-9]/.test(c) ||
+            c=="."
+        ){
+
+            let numero="";
+
+            while(
+                i<texto.length &&
+                /[0-9.]/.test(texto[i])
+            ){
+
+                numero+=texto[i];
+                i++;
+
+            }
+
+            if(
+                numero.split(".").length>2 ||
+                numero=="."
+            ){
+
+                throw new Error(
+                    "Número decimal inválido."
+                );
+
+            }
+
+            tokens.push({
+                tipo:"numero",
+                valor:Number(numero)
+            });
+
+            continue;
+
+        }
+
+
+        if(/[a-zA-Z]/.test(c)){
+
+            let palabra="";
+
+            while(
+                i<texto.length &&
+                /[a-zA-Z]/.test(texto[i])
+            ){
+
+                palabra+=texto[i];
+                i++;
+
+            }
+
+            tokens.push({
+                tipo:"palabra",
+                valor:palabra
+            });
+
+            continue;
+
+        }
+
+
+        if(
+            "+-*/^()%!".includes(c)
+        ){
+
+            tokens.push({
+                tipo:"simbolo",
+                valor:c
+            });
+
+            i++;
+
+            continue;
+
+        }
+
+
+        throw new Error(
+            "Símbolo no reconocido: "+c
+        );
+
+    }
+
+    return tokens;
+
+}
+
+
+/* =====================================================
+   PARSER
+===================================================== */
+
+class Parser{
+
+    constructor(tokens){
+
+        this.tokens=tokens;
+        this.pos=0;
+
+    }
+
+
+    actual(){
+
+        return this.tokens[this.pos];
+
+    }
+
+
+    avanzar(){
+
+        return this.tokens[this.pos++];
+
+    }
+
+
+    aceptar(valor){
+
+        if(
+            this.actual() &&
+            this.actual().valor===valor
+        ){
+
+            this.pos++;
+
+            return true;
+
+        }
+
+        return false;
+
+    }
+
+
+    parse(){
+
+        const nodo=this.suma();
+
+        if(
+            this.pos<this.tokens.length
+        ){
+
+            throw new Error(
+                "No pude interpretar: "+
+                this.tokens[this.pos].valor
+            );
+
+        }
+
+        return nodo;
+
+    }
+
+
+    suma(){
+
+        let nodo=
+            this.multiplicacion();
+
+        while(this.actual()){
+
+            const op=
+                this.actual().valor;
+
+            if(
+                op!=="+" &&
+                op!=="-"
+            ){
+
+                break;
+
+            }
+
+            this.avanzar();
+
+            nodo={
+                tipo:"op",
+                op,
+                a:nodo,
+                b:this.multiplicacion()
+            };
+
+        }
+
+        return nodo;
+
+    }
+
+
+    multiplicacion(){
+
+        let nodo=this.potencia();
+
+        while(this.actual()){
+
+            let op=
+                this.actual().valor;
+
+            if(
+                op!=="*" &&
+                op!=="/"
+            ){
+
+                if(
+                    puedeComenzarPrimario(
+                        this.actual()
+                    )
+                ){
+
+                    op="*";
+
+                }else{
+
+                    break;
+
+                }
+
+            }else{
+
+                this.avanzar();
+
+            }
+
+            nodo={
+                tipo:"op",
+                op,
+                a:nodo,
+                b:this.potencia()
+            };
+
+        }
+
+        return nodo;
+
+    }
+
+
+    potencia(){
+
+        let nodo=this.unario();
+
+        if(
+            this.actual() &&
+            this.actual().valor==="^"
+        ){
+
+            this.avanzar();
+
+            nodo={
+                tipo:"op",
+                op:"^",
+                a:nodo,
+                b:this.potencia()
+            };
+
+        }
+
+        return nodo;
+
+    }
+
+
+    unario(){
+
+        if(
+            this.actual() &&
+            (
+                this.actual().valor==="-" ||
+                this.actual().valor==="+"
+            )
+        ){
+
+            const signo=
+                this.avanzar().valor;
+
+            const nodo=
+                this.unario();
+
+            if(signo==="-"){
+
+                return{
+                    tipo:"neg",
+                    a:nodo
+                };
+
+            }
+
+            return nodo;
+
+        }
+
+        return this.postfijo();
+
+    }
+
+
+    postfijo(){
+
+        let nodo=this.primario();
+
+        while(
+            this.actual() &&
+            this.actual().valor==="!"
+        ){
+
+            this.avanzar();
+
+            nodo={
+                tipo:"factorial",
+                a:nodo
+            };
+
+        }
+
+        return nodo;
+
+    }
+
+
+    primario(){
+
+        const token=this.actual();
+
+        if(!token){
+
+            throw new Error(
+                "Falta un número o expresión."
+            );
+
+        }
+
+
+        if(token.tipo==="numero"){
+
+            this.avanzar();
+
+            return{
+                tipo:"numero",
+                valor:token.valor
+            };
+
+        }
+
+
+        if(token.tipo==="palabra"){
+
+            const nombre=
+                token.valor.toLowerCase();
+
+            if(nombre==="pi"){
+
+                this.avanzar();
+
+                return{
+                    tipo:"numero",
+                    valor:Math.PI
+                };
+
+            }
+
+
+            if(nombre==="e"){
+
+                this.avanzar();
+
+                return{
+                    tipo:"numero",
+                    valor:Math.E
+                };
+
+            }
+
+
+            const funciones=[
+                "sin",
+                "cos",
+                "tan",
+                "sqrt",
+                "log",
+                "ln",
+                "abs"
+            ];
+
+
+            if(funciones.includes(nombre)){
+
+                this.avanzar();
+
+                if(!this.aceptar("(")){
+
+                    throw new Error(
+                        "Falta '(' después de "+nombre
+                    );
+
+                }
+
+                const argumento=
+                    this.suma();
+
+                if(!this.aceptar(")")){
+
+                    throw new Error(
+                        "Falta ')' en "+nombre
+                    );
+
+                }
+
+                return{
+                    tipo:"funcion",
+                    nombre,
+                    a:argumento
+                };
+
+            }
+
+
+            throw new Error(
+                "No reconozco "+nombre
+            );
+
+        }
+
+
+        if(token.valor==="("){
+
+            this.avanzar();
+
+            const nodo=
+                this.suma();
+
+            if(!this.aceptar(")")){
+
+                throw new Error(
+                    "Falta ')'."
+                );
+
+            }
+
+            return nodo;
+
+        }
+
+
+        throw new Error(
+            "No reconozco "+token.valor
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   PUEDE COMENZAR PRIMARIO
+===================================================== */
+
+function puedeComenzarPrimario(token){
+
+    if(!token)
+        return false;
+
+    return(
+        token.tipo==="numero" ||
+        token.tipo==="palabra" ||
+        token.valor==="("
+    );
+
+}
+
+
+/* =====================================================
+   EVALUADOR
+===================================================== */
+
+function evaluar(nodo){
+
+    if(nodo.tipo==="numero"){
+
+        return nodo.valor;
+
+    }
+
+
+    if(nodo.tipo==="neg"){
+
+        return -evaluar(nodo.a);
+
+    }
+
+
+    if(nodo.tipo==="factorial"){
+
+        const n=
+            evaluar(nodo.a);
+
+        if(
+            n<0 ||
+            !Number.isInteger(n)
+        ){
+
+            throw new Error(
+                "El factorial requiere un entero."
+            );
+
+        }
+
+        let r=1;
+
+        for(
+            let i=2;
+            i<=n;
+            i++
+        ){
+
+            r*=i;
+
+        }
+
+        return r;
+
+    }
+
+
+    if(nodo.tipo==="funcion"){
+
+        const x=
+            evaluar(nodo.a);
+
+        switch(nodo.nombre){
+
+            case "sqrt":
+
+                if(x<0){
+
+                    throw new Error(
+                        "Raíz cuadrada de número negativo."
+                    );
+
+                }
+
+                return Math.sqrt(x);
+
+
+            case "sin":
+
+                return Math.sin(
+                    x*Math.PI/180
+                );
+
+
+            case "cos":
+
+                return Math.cos(
+                    x*Math.PI/180
+                );
+
+
+            case "tan":
+
+                if(
+                    Math.abs(
+                        Math.cos(
+                            x*Math.PI/180
+                        )
+                    )<1e-12
+                ){
+
+                    throw new Error(
+                        "La tangente no está definida para ese ángulo."
+                    );
+
+                }
+
+                return Math.tan(
+                    x*Math.PI/180
+                );
+
+
+            case "log":
+
+                if(x<=0){
+
+                    throw new Error(
+                        "El logaritmo requiere un número positivo."
+                    );
+
+                }
+
+                return Math.log10(x);
+
+
+            case "ln":
+
+                if(x<=0){
+
+                    throw new Error(
+                        "El logaritmo requiere un número positivo."
+                    );
+
+                }
+
+                return Math.log(x);
+
+
+            case "abs":
+
+                return Math.abs(x);
+
+        }
+
+    }
+
+
+    if(nodo.tipo==="op"){
+
+        const a=evaluar(nodo.a);
+
+        const b=evaluar(nodo.b);
+
+        switch(nodo.op){
+
+            case "+":
+
+                return a+b;
+
+            case "-":
+
+                return a-b;
+
+            case "*":
+
+                return a*b;
+
+            case "/":
+
+                if(b===0){
+
+                    throw new Error(
+                        "No se puede dividir entre cero."
+                    );
+
+                }
+
+                return a/b;
+
+            case "^":
+
+                return Math.pow(a,b);
+
+        }
+
+    }
+
+
+    throw new Error(
+        "No se pudo evaluar la expresión."
+    );
+
+}
+
+
+/* =====================================================
+   GENERADOR DE PASOS NUMÉRICOS
+===================================================== */
+
+function generarPasos(arbol){
+
+    let actual=
+        clonar(arbol);
+
+    const pasos=[];
+
+    let limite=0;
+
+    while(
+        !esNumero(actual) &&
+        limite<1000
+    ){
+
+        limite++;
+
+        const objetivo=
+            buscarOperacion(actual);
+
+        if(!objetivo)
+            break;
+
+        const valor=
+            redondear(
+                evaluar(objetivo)
+            );
+
+        const nuevo=
+            reemplazar(
+                actual,
+                objetivo,
+                {
+                    tipo:"numero",
+                    valor
+                }
+            );
+
+        pasos.push({
+
+            antes:actual,
+
+            objetivo:objetivo,
+
+            despues:nuevo,
+
+            valor:valor
+
+        });
+
+        actual=nuevo;
+
+    }
+
+    return pasos;
+
+}
+
+
+/* =====================================================
+   BUSCAR OPERACIÓN
+===================================================== */
+
+function buscarOperacion(nodo){
+
+    if(!nodo)
+        return null;
+
+
+    if(nodo.tipo==="funcion"){
+
+        const interno=
+            buscarOperacion(nodo.a);
+
+        if(interno)
+            return interno;
+
+        return nodo;
+
+    }
+
+
+    if(nodo.tipo==="factorial"){
+
+        const interno=
+            buscarOperacion(nodo.a);
+
+        if(interno)
+            return interno;
+
+        return nodo;
+
+    }
+
+
+    if(nodo.tipo==="neg"){
+
+        const interno=
+            buscarOperacion(nodo.a);
+
+        if(interno)
+            return interno;
+
+        return nodo;
+
+    }
+
+
+    if(nodo.tipo==="op"){
+
+        const izquierda=
+            buscarOperacion(nodo.a);
+
+        if(izquierda)
+            return izquierda;
+
+
+        const derecha=
+            buscarOperacion(nodo.b);
+
+        if(derecha)
+            return derecha;
+
+
+        return nodo;
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =====================================================
+   REEMPLAZAR
+===================================================== */
+
+function reemplazar(
+    raiz,
+    objetivo,
+    nuevo
+){
+
+    if(raiz===objetivo)
+        return nuevo;
+
+
+    if(raiz.tipo==="op"){
+
+        return{
+
+            tipo:"op",
+
+            op:raiz.op,
+
+            a:reemplazar(
+                raiz.a,
+                objetivo,
+                nuevo
+            ),
+
+            b:reemplazar(
+                raiz.b,
+                objetivo,
+                nuevo
+            )
+
+        };
+
+    }
+
+
+    if(raiz.tipo==="funcion"){
+
+        return{
+
+            tipo:"funcion",
+
+            nombre:raiz.nombre,
+
+            a:reemplazar(
+                raiz.a,
+                objetivo,
+                nuevo
+            )
+
+        };
+
+    }
+
+
+    if(raiz.tipo==="factorial"){
+
+        return{
+
+            tipo:"factorial",
+
+            a:reemplazar(
+                raiz.a,
+                objetivo,
+                nuevo
+            )
+
+        };
+
+    }
+
+
+    if(raiz.tipo==="neg"){
+
+        return{
+
+            tipo:"neg",
+
+            a:reemplazar(
+                raiz.a,
+                objetivo,
+                nuevo
+            )
+
+        };
+
+    }
+
+
+    return raiz;
+
+}
+
+
+/* =====================================================
+   NÚMERO
+===================================================== */
+
+function esNumero(nodo){
+
+    return nodo &&
+        nodo.tipo==="numero";
+
+}
+
+
+/* =====================================================
+   MOSTRAR NODO
+===================================================== */
+
+function mostrar(nodo){
+
+    if(nodo.tipo==="numero"){
+
+        return formato(
+            nodo.valor
+        );
+
+    }
+
+
+    if(nodo.tipo==="neg"){
+
+        return "−" +
+            envolver(nodo.a);
+
+    }
+
+
+    if(nodo.tipo==="factorial"){
+
+        return envolver(nodo.a)+"!";
+
+    }
+
+
+    if(nodo.tipo==="funcion"){
+
+        if(nodo.nombre==="sqrt"){
+
+            return `√(${mostrar(nodo.a)})`;
+
+        }
+
+        return `${nodo.nombre}(${mostrar(nodo.a)})`;
+
+    }
+
+
+    if(nodo.tipo==="op"){
+
+        const a=
+            mostrar(nodo.a);
+
+        const b=
+            mostrar(nodo.b);
+
+
+        if(nodo.op==="^"){
+
+            return `${a}<sup>${b}</sup>`;
+
+        }
+
+
+        if(nodo.op==="/"){
+
+            return `
+                <span class="fraccion">
+
+                    <span class="arriba">
+                        ${a}
+                    </span>
+
+                    <span class="abajo">
+                        ${b}
+                    </span>
+
+                </span>
+            `;
+
+        }
+
+
+        if(nodo.op==="*"){
+
+            return `${a} × ${b}`;
+
+        }
+
+
+        return `${a} ${nodo.op} ${b}`;
+
+    }
+
+
+    return "";
+
+}
+
+
+/* =====================================================
+   ENVOLVER
+===================================================== */
+
+function envolver(nodo){
+
+    if(nodo.tipo==="numero")
+        return mostrar(nodo);
+
+    return `(${mostrar(nodo)})`;
+
+}
+
+
+/* =====================================================
+   EXPLICACIÓN DE OPERACIONES NUMÉRICAS
+===================================================== */
+
+function explicar(nodo){
+
+    if(nodo.tipo==="funcion"){
+
+        const nombres={
+
+            sqrt:
+                "Calculamos la raíz.",
+
+            sin:
+                "Calculamos el seno.",
+
+            cos:
+                "Calculamos el coseno.",
+
+            tan:
+                "Calculamos la tangente.",
+
+            log:
+                "Calculamos el logaritmo.",
+
+            ln:
+                "Calculamos el logaritmo natural.",
+
+            abs:
+                "Calculamos el valor absoluto."
+
+        };
+
+        return nombres[nodo.nombre];
+
+    }
+
+
+    if(nodo.tipo==="factorial"){
+
+        return "Calculamos el factorial.";
+
+    }
+
+
+    if(nodo.tipo==="neg"){
+
+        return "Aplicamos el signo negativo.";
+
+    }
+
+
+    if(nodo.tipo==="op"){
+
+        switch(nodo.op){
+
+            case "^":
+                return "Calculamos la potencia.";
+
+            case "*":
+                return "Multiplicamos.";
+
+            case "/":
+                return "Dividimos.";
+
+            case "+":
+                return "Sumamos.";
+
+            case "-":
+                return "Restamos.";
+
+        }
+
+    }
+
+    return "";
+
+}
+
+
+/* =====================================================
+   SOLUCIÓN DE EXPRESIÓN NUMÉRICA
+===================================================== */
+
+function generarSolucion(
+    arbol,
+    resultado
+){
+
+    const pasos=
+        generarPasos(arbol);
+
+
+    let html=`
+
+        <div class="hoja">
+
+            <div class="titulo-ejercicio">
+                EJERCICIO
+            </div>
+
+            <div class="ejercicio">
+                ${mostrar(arbol)}
+            </div>
+
+    `;
+
+
+    if(pasos.length===0){
+
+        html+=`
+
+            <div class="paso">
+
+                <div class="paso-numero">
+                    Paso 1
+                </div>
+
+                <div class="formula">
+                    ${mostrar(arbol)}
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    pasos.forEach(
+        (paso,index)=>{
+
+            html+=`
+
+                <div class="paso">
+
+                    <div class="paso-numero">
+                        Paso ${index+1}
+                    </div>
+
+                    <div class="formula">
+
+                        ${mostrar(paso.antes)}
+
+                    </div>
+
+                    <div class="explicacion">
+
+                        ${mostrar(paso.objetivo)}
+                        =
+                        ${formato(paso.valor)}
+
+                    </div>
+
+                    <div class="formula">
+
+                        ${mostrar(paso.despues)}
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    html+=`
+
+        <div class="final">
+
+            <div>
+                Resultado
+            </div>
+
+            <div class="final-numero">
+                ${formato(resultado)}
+            </div>
+
+        </div>
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "solucion"
+    ).innerHTML=html;
+
+}
+
+
+/* =====================================================
+   PASOS CON MATH.JS
+===================================================== */
+
+function generarPasosMath(
+    expresion,
+    resultado
+){
+
+    const pasos=[];
+
+    pasos.push(expresion);
+
+
+    try{
+
+        let actual =
+            math.parse(expresion);
+
+        let anterior =
+            actual.toString();
+
+
+        for(
+            let i=0;
+            i<20;
+            i++
+        ){
+
+            let siguiente =
+                math.simplify(actual);
+
+            let texto =
+                siguiente.toString();
+
+            if(texto===anterior)
+                break;
+
+            pasos.push(texto);
+
+            actual=siguiente;
+
+            anterior=texto;
+
+        }
+
+    }catch{
+
+    }
+
+
+    if(
+        pasos.length===0 ||
+        pasos[pasos.length-1]!==String(resultado)
+    ){
+
+        pasos.push(
+            String(resultado)
+        );
+
+    }
+
+
+    let html=`
+
+        <div class="hoja">
+
+            <div class="titulo-ejercicio">
+                EJERCICIO
+            </div>
+
+            <div class="ejercicio">
+                ${bonito(expresion)}
+            </div>
+
+    `;
+
+
+    pasos.forEach(
+        (paso,index)=>{
+
+            html+=`
+
+                <div class="paso">
+
+                    <div class="paso-numero">
+                        Paso ${index+1}
+                    </div>
+
+                    <div class="formula">
+                        ${bonito(paso)}
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    html+=`
+
+        <div class="final">
+
+            <div>
+                Resultado
+            </div>
+
+            <div class="final-numero">
+                ${formato(resultado)}
+            </div>
+
+        </div>
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "solucion"
+    ).innerHTML=html;
+
+}
+
+
+/* =====================================================
+   ECUACIONES
+===================================================== */
+
+function resolverEcuacion(texto){
+
+    const partes =
+        texto.split("=");
+
+
+    if(partes.length!==2){
+
+        throw new Error(
+            "La ecuación debe tener un solo signo =."
+        );
+
+    }
+
+
+    const izquierda =
+        normalizar(partes[0]);
+
+    const derecha =
+        normalizar(partes[1]);
+
+
+    const variables =
+        obtenerVariables(texto);
+
+
+    if(variables.length===0){
+
+        throw new Error(
+            "No se encontró una variable."
+        );
+
+    }
+
+
+    if(
+        texto.split(/\n/)
+            .filter(x=>x.includes("="))
+            .length>=2
+    ){
+
+        return resolverSistema(
+            texto,
+            variables
+        );
+
+    }
+
+
+    if(variables.length>1){
+
+        return resolverSistema(
+            texto,
+            variables
+        );
+
+    }
+
+
+    const variable =
+        variables[0];
+
+
+    const expresionOriginal =
+        `(${izquierda})-(${derecha})`;
+
+
+    let soluciones=[];
+
+
+    try{
+
+        const respuesta =
+            nerdamer.solveEquations(
+                expresionOriginal,
+                variable
+            );
+
+
+        soluciones =
+            normalizarRespuestaSoluciones(
+                respuesta
+            );
+
+    }catch(error){
+
+        try{
+
+            const respuesta =
+                nerdamer.solveEquations(
+                    `${izquierda}=${derecha}`,
+                    variable
+                );
+
+            soluciones =
+                normalizarRespuestaSoluciones(
+                    respuesta
+                );
+
+        }catch{
+
+        }
+
+    }
+
+
+    if(soluciones.length===0){
+
+        throw new Error(
+            "No se pudo encontrar una solución."
+        );
+
+    }
+
+
+    const grado =
+        detectarGrado(
+            izquierda,
+            derecha,
+            variable
+        );
+
+
+    document.getElementById(
+        "resultado"
+    ).innerHTML =
+        soluciones
+        .map(
+            (x,i)=>
+                `${variable}${subindice(i+1)} = ${bonito(x)}`
+        )
+        .join("<br>");
+
+
+    generarPasosEcuacion(
+        izquierda,
+        derecha,
+        variable,
+        soluciones,
+        grado
+    );
+
+}
+
+
+/* =====================================================
+   NORMALIZAR SOLUCIONES DE NERDAMER
+===================================================== */
+
+function normalizarRespuestaSoluciones(respuesta){
+
+    const soluciones=[];
+
+    if(!respuesta)
+        return soluciones;
+
+
+    if(Array.isArray(respuesta)){
+
+        respuesta.forEach(item=>{
+
+            if(Array.isArray(item)){
+
+                if(item.length>=2){
+
+                    soluciones.push(
+                        String(item[1])
+                    );
+
+                }else if(item.length===1){
+
+                    soluciones.push(
+                        String(item[0])
+                    );
+
+                }
+
+            }else if(
+                item !== null &&
+                item !== undefined
+            ){
+
+                soluciones.push(
+                    String(item)
+                );
+
+            }
+
+        });
+
+    }else{
+
+        soluciones.push(
+            String(respuesta)
+        );
+
+    }
+
+
+    return soluciones
+        .map(x=>x.trim())
+        .filter(x=>x);
+
+}
+
+
+/* =====================================================
+   DETECTAR GRADO
+===================================================== */
+
+function detectarGrado(
+    izquierda,
+    derecha,
+    variable
+){
+
+    try{
+
+        const expresion =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const polinomio =
+            String(expresion);
+
+
+        let mayor=0;
+
+
+        for(
+            let i=20;
+            i>=0;
+            i--
+        ){
+
+            try{
+
+                const termino =
+                    nerdamer(
+                        polinomio
+                    ).coeff(
+                        variable,
+                        i
+                    );
+
+
+                if(
+                    String(termino)!=="0"
+                ){
+
+                    mayor=i;
+
+                    break;
+
+                }
+
+            }catch{
+
+            }
+
+        }
+
+
+        return mayor;
+
+    }catch{
+
+        return null;
+
+    }
+
+}
+
+
+/* =====================================================
+   PASOS DE ECUACIÓN
+===================================================== */
+
+function generarPasosEcuacion(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    grado
+){
+
+    const pasos=[];
+
+
+    pasos.push(
+        `${bonito(izquierda)} = ${bonito(derecha)}`
+    );
+
+
+    /*
+       PRIMERO DETECTAMOS TIPOS ESPECIALES.
+    */
+
+    if(
+        detectarEcuacionRacional(
+            izquierda,
+            derecha
+        )
+    ){
+
+        generarPasosRacional(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(
+        izquierda.includes("sqrt") ||
+        derecha.includes("sqrt")
+    ){
+
+        generarPasosRadical(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(
+        esEcuacionLogaritmica(
+            izquierda,
+            derecha
+        )
+    ){
+
+        generarPasosLogaritmica(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(
+        esEcuacionExponencial(
+            izquierda,
+            derecha,
+            variable
+        )
+    ){
+
+        generarPasosExponencial(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(grado===1){
+
+        generarPasosPrimerGrado(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(grado===2){
+
+        generarPasosSegundoGrado(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else if(
+        grado!==null &&
+        grado>=3
+    ){
+
+        generarPasosPolinomio(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    else{
+
+        generarPasosGenerales(
+            izquierda,
+            derecha,
+            variable,
+            soluciones,
+            pasos
+        );
+
+    }
+
+
+    mostrarPasosEcuacion(
+        pasos
+    );
+
+}
+
+
+/* =====================================================
+   PRIMER GRADO
+===================================================== */
+
+function generarPasosPrimerGrado(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    try{
+
+        const expresion =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const texto =
+            String(expresion);
+
+
+        const a =
+            numeroNerdamer(
+                nerdamer(texto)
+                    .coeff(variable,1)
+            );
+
+
+        const b =
+            numeroNerdamer(
+                nerdamer(texto)
+                    .coeff(variable,0)
+            );
+
+
+        if(
+            Number.isFinite(a) &&
+            Number.isFinite(b) &&
+            a!==0
+        ){
+
+            /*
+               ax + b = 0
+            */
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} ${signoConstante(b)} = 0`
+            );
+
+
+            /*
+               ax + b - b = 0 - b
+            */
+
+            if(b!==0){
+
+                pasos.push(
+                    `${formatoAlgebraico(a,variable)} ${signoOperacion(-b)} = ${formato(-b)}`
+                );
+
+            }
+
+
+            /*
+               ax = -b
+            */
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} = ${formato(-b)}`
+            );
+
+
+            /*
+               División en ambos lados
+            */
+
+            if(a!==1){
+
+                pasos.push(
+                    `${formatoAlgebraico(a,variable)} ÷ ${formato(a)} = ${formato(-b)} ÷ ${formato(a)}`
+                );
+
+                pasos.push(
+                    `${variable} = ${formato(-b/a)}`
+                );
+
+            }else{
+
+                pasos.push(
+                    `${variable} = ${formato(-b)}`
+                );
+
+            }
+
+
+            return;
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            pasos.push(
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   SIGNO CONSTANTE
+===================================================== */
+
+function signoConstante(n){
+
+    if(n>=0)
+        return `+ ${formato(n)}`;
+
+    return `− ${formato(Math.abs(n))}`;
+
+}
+
+
+function signoOperacion(n){
+
+    if(n>=0)
+        return `+ ${formato(n)}`;
+
+    return `− ${formato(Math.abs(n))}`;
+
+}
+
+
+/* =====================================================
+   NÚMERO NERDAMER
+===================================================== */
+
+function numeroNerdamer(valor){
+
+    try{
+
+        const texto=String(valor);
+
+        const evaluado =
+            nerdamer(texto).evaluate();
+
+        const numero =
+            Number(String(evaluado));
+
+        if(Number.isFinite(numero))
+            return numero;
+
+    }catch{
+
+    }
+
+    const numero =
+        Number(valor);
+
+    return numero;
+
+}
+
+
+/* =====================================================
+   SEGUNDO GRADO
+===================================================== */
+
+function generarPasosSegundoGrado(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    try{
+
+        const expresion =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const texto =
+            String(expresion);
+
+
+        pasos.push(
+            `${bonito(texto)} = 0`
+        );
+
+
+        const coef =
+            obtenerCoeficientes(
+                texto,
+                variable,
+                2
+            );
+
+
+        if(coef){
+
+            const a=coef[0];
+            const b=coef[1];
+            const c=coef[2];
+
+
+            if(
+                Number.isFinite(a) &&
+                Number.isFinite(b) &&
+                Number.isFinite(c)
+            ){
+
+                const discriminante =
+                    b*b - 4*a*c;
+
+
+                /*
+                   IDENTIFICAMOS a, b y c
+                */
+
+                pasos.push(
+                    `a = ${formato(a)}, b = ${formato(b)}, c = ${formato(c)}`
+                );
+
+
+                /*
+                   DISCRIMINANTE
+                */
+
+                pasos.push(
+                    `Δ = b² − 4ac`
+                );
+
+
+                pasos.push(
+                    `Δ = (${formato(b)})² − 4×${formato(a)}×${formato(c)}`
+                );
+
+
+                pasos.push(
+                    `Δ = ${formato(b*b)} − ${formato(4*a*c)}`
+                );
+
+
+                pasos.push(
+                    `Δ = ${formato(discriminante)}`
+                );
+
+
+                /*
+                   FÓRMULA GENERAL
+                */
+
+                pasos.push(
+                    `x = (−b ± √Δ) ÷ (2a)`
+                );
+
+
+                pasos.push(
+                    `x = (−(${formato(b)}) ± √(${formato(discriminante)})) ÷ (2×${formato(a)})`
+                );
+
+
+                if(discriminante>=0){
+
+                    const raiz =
+                        Math.sqrt(
+                            discriminante
+                        );
+
+
+                    pasos.push(
+                        `x = (${formato(-b)} ± ${formato(raiz)}) ÷ ${formato(2*a)}`
+                    );
+
+
+                    const x1 =
+                        (-b + raiz)/(2*a);
+
+                    const x2 =
+                        (-b - raiz)/(2*a);
+
+
+                    pasos.push(
+                        `x₁ = (${formato(-b)} + ${formato(raiz)}) ÷ ${formato(2*a)}`
+                    );
+
+
+                    pasos.push(
+                        `x₁ = ${formato(x1)}`
+                    );
+
+
+                    pasos.push(
+                        `x₂ = (${formato(-b)} − ${formato(raiz)}) ÷ ${formato(2*a)}`
+                    );
+
+
+                    pasos.push(
+                        `x₂ = ${formato(x2)}`
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        /*
+           Si existe factorización también
+           la mostramos.
+        */
+
+        try{
+
+            const factor =
+                nerdamer(texto).factor();
+
+            const factorTexto =
+                String(factor);
+
+
+            if(
+                factorTexto &&
+                factorTexto!==texto
+            ){
+
+                pasos.push(
+                    `${bonito(factorTexto)} = 0`
+                );
+
+            }
+
+        }catch{
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+
+    /*
+       Evitamos repetir soluciones que
+       ya aparecieron en los pasos.
+    */
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            const textoSol =
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`;
+
+            if(
+                !pasos.includes(textoSol)
+            ){
+
+                pasos.push(
+                    textoSol
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   POLINOMIOS
+===================================================== */
+
+function generarPasosPolinomio(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    try{
+
+        const expresion =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const texto =
+            String(expresion);
+
+
+        pasos.push(
+            `${bonito(texto)} = 0`
+        );
+
+
+        /*
+           INTENTAMOS FACTORIZAR
+        */
+
+        const factor =
+            nerdamer(texto).factor();
+
+
+        const factorTexto =
+            String(factor);
+
+
+        if(
+            factorTexto &&
+            factorTexto!==texto
+        ){
+
+            pasos.push(
+                `${bonito(factorTexto)} = 0`
+            );
+
+
+            /*
+               Extraemos factores
+            */
+
+            const factores =
+                extraerFactores(
+                    factorTexto
+                );
+
+
+            if(factores.length){
+
+                factores.forEach(
+                    factorIndividual=>{
+
+                        pasos.push(
+                            `${bonito(factorIndividual)} = 0`
+                        );
+
+                        const solucionFactor =
+                            obtenerSolucionFactor(
+                                factorIndividual,
+                                variable
+                            );
+
+                        if(solucionFactor){
+
+                            pasos.push(
+                                `${variable} = ${bonito(solucionFactor)}`
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+
+        }
+
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            pasos.push(
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   OBTENER SOLUCIÓN DE FACTOR
+===================================================== */
+
+function obtenerSolucionFactor(
+    factor,
+    variable
+){
+
+    try{
+
+        const respuesta =
+            nerdamer.solveEquations(
+                `${factor}=0`,
+                variable
+            );
+
+        const soluciones =
+            normalizarRespuestaSoluciones(
+                respuesta
+            );
+
+        if(soluciones.length)
+            return soluciones[0];
+
+    }catch{
+
+    }
+
+    return null;
+
+}
+
+
+/* =====================================================
+   RADICALES
+===================================================== */
+
+function generarPasosRadical(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    /*
+       CASO SIMPLE:
+
+       √(x+5) = 7
+    */
+
+
+    const cantidadIzq =
+        contarRaices(izquierda);
+
+    const cantidadDer =
+        contarRaices(derecha);
+
+
+    if(
+        cantidadIzq===1 &&
+        cantidadDer===0
+    ){
+
+        pasos.push(
+            `(${bonito(izquierda)})² = (${bonito(derecha)})²`
+        );
+
+
+        try{
+
+            const nuevaIzquierda =
+                nerdamer(
+                    `(${izquierda})^2`
+                ).expand();
+
+
+            const nuevaDerecha =
+                nerdamer(
+                    `(${derecha})^2`
+                ).expand();
+
+
+            pasos.push(
+                `${bonito(String(nuevaIzquierda))} = ${bonito(String(nuevaDerecha))}`
+            );
+
+
+            const simplificada =
+                simplificar(
+                    String(nuevaIzquierda)
+                );
+
+
+            const simplificadaDer =
+                simplificar(
+                    String(nuevaDerecha)
+                );
+
+
+            pasos.push(
+                `${bonito(simplificada)} = ${bonito(simplificadaDer)}`
+            );
+
+
+            generarDespejeDesdeExpresion(
+                simplificada,
+                simplificadaDer,
+                variable,
+                pasos
+            );
+
+
+        }catch{
+
+        }
+
+    }
+
+
+    else if(
+        cantidadDer===1 &&
+        cantidadIzq===0
+    ){
+
+        pasos.push(
+            `(${bonito(izquierda)})² = (${bonito(derecha)})²`
+        );
+
+
+        try{
+
+            const nuevaIzquierda =
+                nerdamer(
+                    `(${izquierda})^2`
+                ).expand();
+
+
+            const nuevaDerecha =
+                nerdamer(
+                    `(${derecha})^2`
+                ).expand();
+
+
+            pasos.push(
+                `${bonito(String(nuevaIzquierda))} = ${bonito(String(nuevaDerecha))}`
+            );
+
+
+        }catch{
+
+        }
+
+    }
+
+
+    else{
+
+        /*
+           Para ecuaciones con más de una
+           raíz mostramos el primer paso
+           algebraico real: elevar ambos
+           lados al cuadrado.
+        */
+
+        pasos.push(
+            `(${bonito(izquierda)})² = (${bonito(derecha)})²`
+        );
+
+
+        try{
+
+            const izquierdaCuadrada =
+                nerdamer(
+                    `(${izquierda})^2`
+                ).expand();
+
+
+            const derechaCuadrada =
+                nerdamer(
+                    `(${derecha})^2`
+                ).expand();
+
+
+            pasos.push(
+                `${bonito(String(izquierdaCuadrada))} = ${bonito(String(derechaCuadrada))}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            const linea =
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`;
+
+            if(!pasos.includes(linea)){
+
+                pasos.push(
+                    linea
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+       COMPROBACIÓN
+    */
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            pasos.push(
+                `Comprobación ${subindice(i+1)}: ${bonito(
+                    izquierda
+                ).replace(
+                    new RegExp(
+                        `\\b${variable}\\b`,
+                        "g"
+                    ),
+                    `(${bonito(sol)})`
+                )} = ${bonito(
+                    derecha
+                ).replace(
+                    new RegExp(
+                        `\\b${variable}\\b`,
+                        "g"
+                    ),
+                    `(${bonito(sol)})`
+                )}`
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   CONTAR RAÍCES
+===================================================== */
+
+function contarRaices(texto){
+
+    const coincidencias =
+        String(texto).match(/sqrt/gi);
+
+    return coincidencias
+        ? coincidencias.length
+        : 0;
+
+}
+
+
+/* =====================================================
+   DESPEJE SIMPLE DESPUÉS DE ELEVAR
+===================================================== */
+
+function generarDespejeDesdeExpresion(
+    izquierda,
+    derecha,
+    variable,
+    pasos
+){
+
+    try{
+
+        const expr =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const texto =
+            String(expr);
+
+
+        const a =
+            numeroNerdamer(
+                nerdamer(texto)
+                    .coeff(variable,1)
+            );
+
+
+        const b =
+            numeroNerdamer(
+                nerdamer(texto)
+                    .coeff(variable,0)
+            );
+
+
+        if(
+            Number.isFinite(a) &&
+            Number.isFinite(b) &&
+            a!==0
+        ){
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} ${signoConstante(b)} = 0`
+            );
+
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} = ${formato(-b)}`
+            );
+
+
+            if(a!==1){
+
+                pasos.push(
+                    `${formatoAlgebraico(a,variable)} ÷ ${formato(a)} = ${formato(-b)} ÷ ${formato(a)}`
+                );
+
+                pasos.push(
+                    `${variable} = ${formato(-b/a)}`
+                );
+
+            }else{
+
+                pasos.push(
+                    `${variable} = ${formato(-b)}`
+                );
+
+            }
+
+        }
+
+    }catch{
+
+    }
+
+}
+
+
+/* =====================================================
+   EXPONENCIALES
+===================================================== */
+
+function esEcuacionExponencial(
+    izquierda,
+    derecha,
+    variable
+){
+
+    return (
+        izquierda.includes("^"+variable) ||
+        derecha.includes("^"+variable) ||
+        /\^\s*[a-zA-Z]/.test(izquierda) ||
+        /\^\s*[a-zA-Z]/.test(derecha)
+    );
+
+}
+
+
+function generarPasosExponencial(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    /*
+       CASO:
+
+       2^x = 8
+    */
+
+    if(
+        izquierda.match(
+            new RegExp(
+                `^[0-9.]+\\^${variable}$`
+            )
+        ) &&
+        esNumeroSimple(derecha)
+    ){
+
+        const base =
+            izquierda.split("^")[0];
+
+
+        pasos.push(
+            `ln(${bonito(izquierda)}) = ln(${bonito(derecha)})`
+        );
+
+
+        pasos.push(
+            `${variable}×ln(${base}) = ln(${bonito(derecha)})`
+        );
+
+
+        pasos.push(
+            `${variable} = ln(${bonito(derecha)}) ÷ ln(${base})`
+        );
+
+
+        try{
+
+            const valor =
+                Math.log(
+                    Number(derecha)
+                ) /
+                Math.log(
+                    Number(base)
+                );
+
+
+            pasos.push(
+                `${variable} = ${formato(valor)}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+    else{
+
+        /*
+           Método general usando logaritmo.
+        */
+
+        pasos.push(
+            `ln(${bonito(izquierda)}) = ln(${bonito(derecha)})`
+        );
+
+
+        try{
+
+            const izq =
+                nerdamer(
+                    `ln(${izquierda})`
+                ).expand();
+
+
+            const der =
+                nerdamer(
+                    `ln(${derecha})`
+                ).expand();
+
+
+            pasos.push(
+                `${bonito(String(izq))} = ${bonito(String(der))}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            pasos.push(
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   LOGARÍTMICAS
+===================================================== */
+
+function esEcuacionLogaritmica(
+    izquierda,
+    derecha
+){
+
+    return (
+        /\blog\s*\(/i.test(izquierda) ||
+        /\bln\s*\(/i.test(izquierda) ||
+        /\blog\s*\(/i.test(derecha) ||
+        /\bln\s*\(/i.test(derecha)
+    );
+
+}
+
+
+function generarPasosLogaritmica(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    /*
+       log(x) = 2
+    */
+
+    if(
+        /^log\s*\(/i.test(izquierda)
+    ){
+
+        pasos.push(
+            `10^log(${bonito(
+                extraerArgumentoFuncion(
+                    izquierda,
+                    "log"
+                )
+            )}) = 10^${bonito(derecha)}`
+        );
+
+
+        const argumento =
+            extraerArgumentoFuncion(
+                izquierda,
+                "log"
+            );
+
+
+        pasos.push(
+            `${bonito(argumento)} = 10^${bonito(derecha)}`
+        );
+
+
+        try{
+
+            const valor =
+                Math.pow(
+                    10,
+                    Number(derecha)
+                );
+
+
+            pasos.push(
+                `${variable} = ${formato(valor)}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+
+    else if(
+        /^ln\s*\(/i.test(izquierda)
+    ){
+
+        const argumento =
+            extraerArgumentoFuncion(
+                izquierda,
+                "ln"
+            );
+
+
+        pasos.push(
+            `e^ln(${bonito(argumento)}) = e^${bonito(derecha)}`
+        );
+
+
+        pasos.push(
+            `${bonito(argumento)} = e^${bonito(derecha)}`
+        );
+
+
+        try{
+
+            const valor =
+                Math.exp(
+                    Number(derecha)
+                );
+
+
+            pasos.push(
+                `${variable} = ${formato(valor)}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+
+    else{
+
+        pasos.push(
+            `Aplicamos la función inversa al logaritmo en ambos lados.`
+        );
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            const linea =
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`;
+
+            if(!pasos.includes(linea)){
+
+                pasos.push(
+                    linea
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   EXTRAER ARGUMENTO DE FUNCIÓN
+===================================================== */
+
+function extraerArgumentoFuncion(
+    texto,
+    funcion
+){
+
+    const patron =
+        new RegExp(
+            "^"+funcion+"\\s*\\((.*)\\)$",
+            "i"
+        );
+
+    const encontrado =
+        String(texto).match(patron);
+
+    if(encontrado)
+        return encontrado[1];
+
+    return texto;
+
+}
+
+
+/* =====================================================
+   RACIONALES
+===================================================== */
+
+function detectarEcuacionRacional(
+    izquierda,
+    derecha
+){
+
+    return (
+        izquierda.includes("/") ||
+        derecha.includes("/")
+    );
+
+}
+
+
+function generarPasosRacional(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    /*
+       Ejemplo:
+
+       1/(x-2) = 3/(x+1)
+    */
+
+
+    const denominadores =
+        obtenerDenominadores(
+            izquierda,
+            derecha
+        );
+
+
+    denominadores.forEach(
+        (den,i)=>{
+
+            pasos.push(
+                `${bonito(den)} ≠ 0`
+            );
+
+        }
+    );
+
+
+    if(
+        denominadores.length===2 &&
+        izquierda.includes("/") &&
+        derecha.includes("/")
+    ){
+
+        const den1 =
+            obtenerDenominador(
+                izquierda
+            );
+
+        const den2 =
+            obtenerDenominador(
+                derecha
+            );
+
+
+        pasos.push(
+            `${bonito(den1)}×${bonito(den2)}\left(${bonito(izquierda)}\right) = ${bonito(den1)}×${bonito(den2)}\left(${bonito(derecha)}\right)`
+        );
+
+
+        try{
+
+            const nuevaIzquierda =
+                nerdamer(
+                    `(${den1})*(${izquierda})`
+                ).cancel();
+
+
+            const nuevaDerecha =
+                nerdamer(
+                    `(${den1})*(${den2})*(${derecha})`
+                ).cancel();
+
+
+            pasos.push(
+                `${bonito(String(nuevaIzquierda))} = ${bonito(String(nuevaDerecha))}`
+            );
+
+        }catch{
+
+        }
+
+    }
+
+
+    /*
+       Quitamos denominadores usando
+       la expresión completa.
+    */
+
+    try{
+
+        const ecuacionSinFracciones =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        const simplificada =
+            nerdamer(
+                String(ecuacionSinFracciones)
+            ).cancel()
+            .expand();
+
+
+        pasos.push(
+            `${bonito(String(simplificada))} = 0`
+        );
+
+
+        const a =
+            numeroNerdamer(
+                nerdamer(String(simplificada))
+                    .coeff(variable,1)
+            );
+
+
+        const b =
+            numeroNerdamer(
+                nerdamer(String(simplificada))
+                    .coeff(variable,0)
+            );
+
+
+        if(
+            Number.isFinite(a) &&
+            Number.isFinite(b) &&
+            a!==0
+        ){
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} ${signoConstante(b)} = 0`
+            );
+
+
+            pasos.push(
+                `${formatoAlgebraico(a,variable)} = ${formato(-b)}`
+            );
+
+
+            pasos.push(
+                `${variable} = ${formato(-b)} ÷ ${formato(a)}`
+            );
+
+
+            pasos.push(
+                `${variable} = ${formato(-b/a)}`
+            );
+
+        }
+
+    }catch{
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            const linea =
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`;
+
+            if(!pasos.includes(linea)){
+
+                pasos.push(
+                    linea
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   DENOMINADORES
+===================================================== */
+
+function obtenerDenominadores(
+    izquierda,
+    derecha
+){
+
+    const resultado=[];
+
+    [
+        izquierda,
+        derecha
+    ].forEach(expr=>{
+
+        const den =
+            obtenerDenominador(expr);
+
+        if(
+            den &&
+            !resultado.includes(den)
+        ){
+
+            resultado.push(den);
+
+        }
+
+    });
+
+    return resultado;
+
+}
+
+
+function obtenerDenominador(expr){
+
+    const partes =
+        String(expr).split("/");
+
+    if(partes.length<2)
+        return null;
+
+    return partes[partes.length-1]
+        .trim();
+
+}
+
+
+/* =====================================================
+   EXPRESIONES GENERALES
+===================================================== */
+
+function generarPasosGenerales(
+    izquierda,
+    derecha,
+    variable,
+    soluciones,
+    pasos
+){
+
+    try{
+
+        const expresion =
+            nerdamer(
+                `(${izquierda})-(${derecha})`
+            ).expand();
+
+
+        pasos.push(
+            `${bonito(String(expresion))} = 0`
+        );
+
+
+        const simplificada =
+            nerdamer(
+                String(expresion)
+            ).simplify();
+
+
+        if(
+            String(simplificada)!==
+            String(expresion)
+        ){
+
+            pasos.push(
+                `${bonito(String(simplificada))} = 0`
+            );
+
+        }
+
+    }catch{
+
+    }
+
+
+    soluciones.forEach(
+        (sol,i)=>{
+
+            pasos.push(
+                `${variable}${subindice(i+1)} = ${bonito(sol)}`
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   COMPROBAR NÚMERO
+===================================================== */
+
+function esNumeroSimple(texto){
+
+    return /^-?\d+(?:\.\d+)?$/.test(
+        String(texto).trim()
+    );
+
+}
+
+
+/* =====================================================
+   COEFICIENTES
+===================================================== */
+
+function obtenerCoeficientes(
+    expresion,
+    variable,
+    grado
+){
+
+    const resultado=[];
+
+
+    try{
+
+        for(
+            let i=grado;
+            i>=0;
+            i--
+        ){
+
+            const coef =
+                nerdamer(
+                    expresion
+                ).coeff(
+                    variable,
+                    i
+                );
+
+
+            resultado.push(
+                numeroNerdamer(coef)
+            );
+
+        }
+
+
+        return resultado;
+
+    }catch{
+
+        return null;
+
+    }
+
+}
+
+
+/* =====================================================
+   FACTORES
+===================================================== */
+
+function extraerFactores(texto){
+
+    const factores=[];
+
+
+    /*
+       Primero intentamos reconocer
+       productos de factores.
+    */
+
+    const regex =
+        /\(([^()]*)\)/g;
+
+
+    let encontrado;
+
+
+    while(
+        (encontrado=regex.exec(texto))
+        !==null
+    ){
+
+        if(
+            !factores.includes(
+                encontrado[1]
+            )
+        ){
+
+            factores.push(
+                encontrado[1]
+            );
+
+        }
+
+    }
+
+
+    return factores;
+
+}
+
+
+/* =====================================================
+   FORMATO ALGEBRAICO
+===================================================== */
+
+function formatoAlgebraico(
+    coef,
+    variable
+){
+
+    if(coef===0)
+        return "0";
+
+
+    if(variable===""){
+
+        return formato(coef);
+
+    }
+
+
+    if(coef===1){
+
+        return variable;
+
+    }
+
+
+    if(coef===-1){
+
+        return "−"+variable;
+
+    }
+
+
+    return `${formato(coef)}×${variable}`;
+
+}
+
+
+/* =====================================================
+   SUBÍNDICES
+===================================================== */
+
+function subindice(numero){
+
+    const mapa={
+
+        0:"₀",
+        1:"₁",
+        2:"₂",
+        3:"₃",
+        4:"₄",
+        5:"₅",
+        6:"₆",
+        7:"₇",
+        8:"₈",
+        9:"₉"
+
+    };
+
+
+    return String(numero)
+        .split("")
+        .map(
+            x=>mapa[x] || x
+        )
+        .join("");
+
+}
+
+
+/* =====================================================
+   MOSTRAR PASOS DE ECUACIÓN
+===================================================== */
+
+function mostrarPasosEcuacion(pasos){
+
+    let html=`
+
+        <div class="hoja">
+
+            <div class="titulo-ejercicio">
+                EJERCICIO
+            </div>
+
+    `;
+
+
+    /*
+       Eliminamos pasos repetidos.
+    */
+
+    const pasosUnicos=[];
+
+
+    pasos.forEach(paso=>{
+
+        const texto =
+            String(paso)
+            .trim();
+
+        if(
+            texto &&
+            !pasosUnicos.includes(texto)
+        ){
+
+            pasosUnicos.push(texto);
+
+        }
+
+    });
+
+
+    pasosUnicos.forEach(
+        (paso,index)=>{
+
+            html+=`
+
+                <div class="paso">
+
+                    <div class="paso-numero">
+                        Paso ${index+1}
+                    </div>
+
+                    <div class="formula">
+
+                        ${bonito(paso)}
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    html+=`
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "solucion"
+    ).innerHTML=html;
+
+}
+
+
+/* =====================================================
+   SISTEMAS
+===================================================== */
+
+function resolverSistema(
+    texto,
+    variables
+){
+
+    const ecuaciones =
+        texto
+        .split(/\n/)
+        .map(x=>x.trim())
+        .filter(
+            x=>x.includes("=")
+        );
+
+
+    if(ecuaciones.length<2){
+
+        throw new Error(
+            "Para resolver un sistema escribe una ecuación por línea."
+        );
+
+    }
+
+
+    try{
+
+        const resultado =
+            nerdamer.solveEquations(
+                ecuaciones
+            );
+
+
+        const pares =
+            normalizarSistemaResultado(
+                resultado
+            );
+
+
+        document.getElementById(
+            "resultado"
+        ).innerHTML =
+            pares
+            .map(
+                par=>
+                    `${par.variable} = ${bonito(par.valor)}`
+            )
+            .join("<br>");
+
+
+        const pasos=[];
+
+
+        ecuaciones.forEach(
+            (ecuacion,index)=>{
+
+                pasos.push(
+                    `Ecuación ${index+1}: ${bonito(ecuacion)}`
+                );
+
+            }
+        );
+
+
+        /*
+           Intentamos resolver un sistema
+           lineal de dos ecuaciones.
+        */
+
+        if(
+            ecuaciones.length===2 &&
+            variables.length===2
+        ){
+
+            const pasosSistema =
+                generarPasosSistemaLineal(
+                    ecuaciones,
+                    variables
+                );
+
+
+            pasos.push(
+                ...pasosSistema
+            );
+
+        }else{
+
+            pasos.push(
+                "Se obtiene la solución del sistema."
+            );
+
+            pares.forEach(
+                par=>{
+
+                    pasos.push(
+                        `${par.variable} = ${bonito(par.valor)}`
+                    );
+
+                }
+            );
+
+        }
+
+
+        mostrarPasosEcuacion(
+            pasos
+        );
+
+
+    }catch(error){
+
+        throw new Error(
+            "No se pudo resolver el sistema."
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   RESULTADO SISTEMA
+===================================================== */
+
+function normalizarSistemaResultado(
+    resultado
+){
+
+    const pares=[];
+
+
+    if(!Array.isArray(resultado))
+        return pares;
+
+
+    resultado.forEach(item=>{
+
+        if(Array.isArray(item)){
+
+            if(item.length>=2){
+
+                pares.push({
+
+                    variable:
+                        String(item[0]),
+
+                    valor:
+                        String(item[1])
+
+                });
+
+            }
+
+        }
+
+    });
+
+
+    return pares;
+
+}
+
+
+/* =====================================================
+   PASOS SISTEMA LINEAL
+===================================================== */
+
+function generarPasosSistemaLineal(
+    ecuaciones,
+    variables
+){
+
+    const pasos=[];
+
+
+    const v1=variables[0];
+    const v2=variables[1];
+
+
+    try{
+
+        const e1 =
+            ecuaciones[0];
+
+        const e2 =
+            ecuaciones[1];
+
+
+        const partes1 =
+            e1.split("=");
+
+        const partes2 =
+            e2.split("=");
+
+
+        const l1 =
+            normalizar(partes1[0]);
+
+        const r1 =
+            normalizar(partes1[1]);
+
+
+        const l2 =
+            normalizar(partes2[0]);
+
+        const r2 =
+            normalizar(partes2[1]);
+
+
+        const expr1 =
+            nerdamer(
+                `(${l1})-(${r1})`
+            ).expand();
+
+
+        const expr2 =
+            nerdamer(
+                `(${l2})-(${r2})`
+            ).expand();
+
+
+        const a1 =
+            numeroNerdamer(
+                nerdamer(String(expr1))
+                    .coeff(v1,1)
+            );
+
+
+        const b1 =
+            numeroNerdamer(
+                nerdamer(String(expr1))
+                    .coeff(v2,1)
+            );
+
+
+        const c1 =
+            numeroNerdamer(
+                nerdamer(String(expr1))
+                    .coeff(v1,0)
+            );
+
+
+        const a2 =
+            numeroNerdamer(
+                nerdamer(String(expr2))
+                    .coeff(v1,1)
+            );
+
+
+        const b2 =
+            numeroNerdamer(
+                nerdamer(String(expr2))
+                    .coeff(v2,1)
+            );
+
+
+        const c2 =
+            numeroNerdamer(
+                nerdamer(String(expr2))
+                    .coeff(v1,0)
+            );
+
+
+        if(
+            Number.isFinite(a1) &&
+            Number.isFinite(b1) &&
+            Number.isFinite(c1) &&
+            Number.isFinite(a2) &&
+            Number.isFinite(b2) &&
+            Number.isFinite(c2)
+        ){
+
+            /*
+               a1*x + b1*y = -c1
+               a2*x + b2*y = -c2
+            */
+
+            const d1=-c1;
+            const d2=-c2;
+
+
+            pasos.push(
+                `${formatoAlgebraico(a1,v1)} ${signoConstante(b1)}${v2} = ${formato(d1)}`
+            );
+
+
+            pasos.push(
+                `${formatoAlgebraico(a2,v1)} ${signoConstante(b2)}${v2} = ${formato(d2)}`
+            );
+
+
+            /*
+               Eliminación de la primera variable
+            */
+
+            const multiplicador1 =
+                a2;
+
+            const multiplicador2 =
+                a1;
+
+
+            const A1 =
+                a2*a1;
+
+            const B1 =
+                a2*b1;
+
+            const C1 =
+                a2*d1;
+
+
+            const A2 =
+                a1*a2;
+
+            const B2 =
+                a1*b2;
+
+            const C2 =
+                a1*d2;
+
+
+            pasos.push(
+                `(${formato(multiplicador1)})[${formatoAlgebraico(a1,v1)} ${signoConstante(b1)}${v2} = ${formato(d1)}]`
+            );
+
+
+            pasos.push(
+                `(${formato(multiplicador2)})[${formatoAlgebraico(a2,v1)} ${signoConstante(b2)}${v2} = ${formato(d2)}]`
+            );
+
+
+            const nuevoB =
+                B1-B2;
+
+            const nuevoC =
+                C1-C2;
+
+
+            pasos.push(
+                `${formato(A1)}${signoConstante(B1)}${v2} = ${formato(C1)}`
+            );
+
+
+            pasos.push(
+                `${formato(A2)}${signoConstante(B2)}${v2} = ${formato(C2)}`
+            );
+
+
+            pasos.push(
+                `${formato(nuevoB)}${v2} = ${formato(nuevoC)}`
+            );
+
+
+            if(nuevoB!==0){
+
+                const valorV2 =
+                    nuevoC/nuevoB;
+
+
+                pasos.push(
+                    `${v2} = ${formato(nuevoC)} ÷ ${formato(nuevoB)}`
+                );
+
+
+                pasos.push(
+                    `${v2} = ${formato(valorV2)}`
+                );
+
+
+                /*
+                   Sustituimos en la primera ecuación
+                */
+
+                pasos.push(
+                    `${formatoAlgebraico(a1,v1)} ${signoConstante(b1)}(${formato(valorV2)}) = ${formato(d1)}`
+                );
+
+
+                const termino =
+                    b1*valorV2;
+
+
+                pasos.push(
+                    `${formatoAlgebraico(a1,v1)} ${signoConstante(termino)} = ${formato(d1)}`
+                );
+
+
+                const valorV1 =
+                    (d1-termino)/a1;
+
+
+                pasos.push(
+                    `${formatoAlgebraico(a1,v1)} = ${formato(d1-termino)}`
+                );
+
+
+                pasos.push(
+                    `${v1} = ${formato(d1-termino)} ÷ ${formato(a1)}`
+                );
+
+
+                pasos.push(
+                    `${v1} = ${formato(valorV1)}`
+                );
+
+            }
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+
+    return pasos;
+
+}
+
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+function mostrarError(mensaje){
+
+    document.getElementById(
+        "resultado"
+    ).textContent="Error";
+
+
+    document.getElementById(
+        "solucion"
+    ).innerHTML=`
+
+        <div class="hoja">
+
+            <div class="error">
+
+                <b>
+                    No pude resolver el ejercicio.
+                </b>
+
+                <br><br>
+
+                ${escapar(mensaje)}
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   RESOLVER
+===================================================== */
+
+function resolver(){
+
+    const texto =
+        document.getElementById(
+            "entrada"
+        ).value.trim();
+
+
+    if(!texto)
+        return;
+
+
+    try{
+
+        /*
+           SISTEMA
+        */
+
+        if(
+            texto.includes("\n") &&
+            texto
+                .split(/\n/)
+                .filter(
+                    x=>x.includes("=")
+                )
+                .length>=2
+        ){
+
+            const variables =
+                obtenerVariables(texto);
+
+
+            resolverSistema(
+                texto,
+                variables
+            );
+
+            return;
+
+        }
+
+
+        /*
+           ECUACIÓN
+        */
+
+        if(esEcuacion(texto)){
+
+            resolverEcuacion(
+                texto
+            );
+
+            return;
+
+        }
+
+
+        /*
+           EXPRESIÓN NORMAL
+        */
+
+        resolverExpresion(
+            texto
+        );
+
+
+    }catch(error){
+
+        mostrarError(
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   TECLADO
+===================================================== */
+
+document.addEventListener(
+    "keydown",
+    function(e){
+
+        if(
+            e.ctrlKey &&
+            e.key==="Enter"
+        ){
+
+            resolver();
+
+        }
+
+    }
+);
+
+
+
+</script>
+
+</body>
+</html>
